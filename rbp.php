@@ -1,6 +1,7 @@
 <?php
 
 require_once 'rbp.civix.php';
+use CRM_Rbp_ExtensionUtil as E;
 
 /**
  * Implements hook_civicrm_config().
@@ -122,30 +123,19 @@ function rbp_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
   _rbp_civix_civicrm_alterSettingsFolders($metaDataFolders);
 }
 
-// --- Functions below this ship commented out. Uncomment as required. ---
-
 /**
- * Implements hook_civicrm_preProcess().
+ * Implements hook_civicrm_check().
  *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_preProcess
- *
-function rbp_civicrm_preProcess($formName, &$form) {
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_check/
+ */
+function rbp_civicrm_check(&$messages) {
+  if (!CRM_Extension_System::singleton()->getMapper()->isActiveModule('cividiscount')) {
+    $name = 'rbp.dependency.cividiscount';
+    $content = E::ts('Extension %1 depends on %2. No harm can come from having it installed without CiviDiscount, but neither can any good.', array(1 => E::LONG_NAME, 2 => 'org.civicrm.module.cividiscount'));
+    $title = E::ts('Missing Dependency');
+    $severity = \Psr\Log\LogLevel::WARNING;
+    $icon = 'fa-plug';
 
-} // */
-
-/**
- * Implements hook_civicrm_navigationMenu().
- *
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_navigationMenu
- *
-function rbp_civicrm_navigationMenu(&$menu) {
-  _rbp_civix_insert_navigation_menu($menu, NULL, array(
-    'label' => ts('The Page', array('domain' => 'com.ginkgostreet.cividiscount.rbp')),
-    'name' => 'the_page',
-    'url' => 'civicrm/the-page',
-    'permission' => 'access CiviReport,access CiviContribute',
-    'operator' => 'OR',
-    'separator' => 0,
-  ));
-  _rbp_civix_navigationMenu($menu);
-} // */
+    $messages[] = new CRM_Utils_Check_Message($name, $content, $title, $severity, $icon);
+  }
+}
