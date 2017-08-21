@@ -139,3 +139,37 @@ function rbp_civicrm_check(&$messages) {
     $messages[] = new CRM_Utils_Check_Message($name, $content, $title, $severity, $icon);
   }
 }
+
+/**
+ * Implements hook_civicrm_post().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_post/
+ */
+function rbp_civicrm_post($op, $objectName, $objectId, &$objectRef) {
+  $function = '_' . __FUNCTION__ . '_' . $objectName;
+  if (is_callable($function)) {
+    $function($op, $objectId, $objectRef);
+  }
+}
+
+/**
+ * (Delegated) implementation of hook_civicrm_post().
+ */
+function _rbp_civicrm_post_DiscountTrack($op, $id, &$discountTrack) {
+  if ($op !== 'create') {
+    return;
+  }
+
+  $participantCount = CRM_Rbp_Util::getParticipantCount($discountTrack);
+
+  // By the time the post hook fires, CiviDiscount has already incremented the
+  // usage, so we subtract one.
+  $usage = $participantCount - 1;
+
+  if ($usage) {
+    civicrm_api3('DiscountCode', 'create', array(
+      'id' => $discountTrack->item_id,
+      'count_use' => $usage,
+    ));
+  }
+}
