@@ -155,8 +155,8 @@ function rbp_civicrm_post($op, $objectName, $objectId, &$objectRef) {
 /**
  * (Delegated) implementation of hook_civicrm_post().
  */
-function _rbp_civicrm_post_DiscountTrack($op, $id, &$discountTrack) {
-  if ($op !== 'create') {
+function _rbp_civicrm_post_DiscountTrack($op, $id, CRM_CiviDiscount_DAO_Track &$discountTrack) {
+  if ($op !== 'create' || !CRM_Rbp_Util::isRbpEnabled($discountTrack->item_id)) {
     return;
   }
 
@@ -171,5 +171,67 @@ function _rbp_civicrm_post_DiscountTrack($op, $id, &$discountTrack) {
       'id' => $discountTrack->item_id,
       'count_use' => $usage,
     ));
+  }
+}
+
+/**
+ * Implements hook_civicrm_buildForm().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_buildForm/
+ */
+function rbp_civicrm_buildForm($formName, &$form) {
+  $function = '_' . __FUNCTION__ . '_' . $formName;
+  if (is_callable($function)) {
+    $function($form);
+  }
+}
+
+/**
+ * (Delegated) implementation of hook_civicrm_buildForm().
+ */
+function _rbp_civicrm_buildForm_CRM_CiviDiscount_Form_Admin(CRM_CiviDiscount_Form_Admin &$form) {
+  // add the checkbox to the form with the appropriate default value
+  $discountCodeId = $form->getVar('_id');
+  $form->_defaultValues['is_rbp_enabled'] = ($discountCodeId && CRM_Rbp_Util::isRbpEnabled($discountCodeId));
+  $form->add('checkbox', 'is_rbp_enabled', E::ts('Increase usage count for each participant rather than for each transaction?'));
+
+  // add the checkbox to the display and position it
+  CRM_Core_Region::instance('page-body')->add(array(
+    'template' => 'CRM/CiviDiscount/Form/Admin/is_rbp_enabled.tpl',
+  ));
+  Civi::resources()->addScriptFile(E::LONG_NAME, 'js/CRM/CiviDiscount/Form/Admin/is_rbp_enabled.js');
+}
+
+/**
+ * Implements hook_civicrm_postProcess().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_postProcess/
+ */
+function rbp_civicrm_postProcess($formName, &$form) {
+  $function = '_' . __FUNCTION__ . '_' . $formName;
+  if (is_callable($function)) {
+    $function($form);
+  }
+}
+
+/**
+ * (Delegated) implementation of hook_civicrm_postProcess().
+ */
+function _rbp_civicrm_postProcess_CRM_CiviDiscount_Form_Admin(CRM_CiviDiscount_Form_Admin &$form) {
+  $discountCodeId = $form->getVar('_id');
+
+  // in the case of a create, the ID isn't on the form and we have to look it up
+  if (!$discountCodeId) {
+    $discountCodeId = civicrm_api3('DiscountCode', 'getvalue', array(
+      'code' => $form->_submitValues['code'],
+      'return' => 'id',
+    ));
+  }
+
+  if (CRM_Utils_Array::value('is_rbp_enabled', $form->_submitValues)) {
+    CRM_Rbp_Util::enableRbp($discountCodeId);
+  }
+  else {
+    CRM_Rbp_Util::disableRbp($discountCodeId);
   }
 }
