@@ -167,10 +167,14 @@ function _rbp_civicrm_post_DiscountTrack($op, $id, CRM_CiviDiscount_DAO_Track &$
   $usage = $participantCount - 1;
 
   if ($usage) {
-    civicrm_api3('DiscountCode', 'create', array(
-      'id' => $discountTrack->item_id,
-      'count_use' => $usage,
-    ));
+    // Why do we fetch first, and why via DAO rather than API? First of all, we
+    // need the current usage for our calculation. As for the mechanism,
+    // api.DiscountCode.create is wacky; on update it nulls several fields if
+    // they aren't supplied as params. Moreover, it doesn't accept count_use as
+    // a param.
+    $dao = CRM_CiviDiscount_DAO_Item::findById($discountTrack->item_id);
+    $dao->count_use += $usage;
+    $dao->save();
   }
 }
 

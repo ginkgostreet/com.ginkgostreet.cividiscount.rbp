@@ -2,6 +2,12 @@
 
 class CRM_Rbp_Util {
 
+  /**
+   * Gets the participant count associated with a given usage of a discount code.
+   *
+   * @param CRM_CiviDiscount_DAO_Track $discountTrack
+   * @return int
+   */
   public static function getParticipantCount(CRM_CiviDiscount_DAO_Track $discountTrack) {
     $lineItems = civicrm_api3('LineItem', 'get', array(
       'contribution_id' => $discountTrack->contribution_id,
