@@ -1,11 +1,16 @@
 # com.ginkgostreet.cividiscount.rbp
 Redeem by Participant (CiviDiscount)
 
-Presently, the usage count for a discount program is based on transactions rather than admissions. For example, suppose
-Acme Corp has 100 passes to disburse for an event. For a transaction in which a 100% discount code is used to purchase
-admission for 25 students, CiviDiscount would show that 99 passes remain, where we would expect that only 75 passes remain.
+## Use Case
+In some cases, the [CiviDiscount](https://github.com/dlobo/org.civicrm.module.cividiscount/) extension bases the usage
+count for a discount program on the number of transactions rather than the number of admissions. (See Configuration
+Notes below for additional detail.) For example, suppose Acme Corp has 100 passes to disburse for an event. For a
+transaction in which a discount code is used to purchase admission for 25 students, CiviDiscount would show
+that 99 passes remain, where we would expect that only 75 passes remain.
 
-Note: This extension has been tested for use cases where the number of participants is configured in a price set. There have
+### Configuration Notes
+This extension has been tested for use cases where [the number of participants is configured in a price
+set](https://docs.civicrm.org/user/en/latest/events/complex-event-fees/#creating-a-new-price-field). There have
 been reports that using CiviEvent's "Register multiple participants" feature (found on the "Online Registration" tab of an
 event config) already provides the desired behavior, and that this extension interferes with that. In the short term, site
 administrators can resolve this conflict by simply unchecking the "Increase usage count for each participant rather than
