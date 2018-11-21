@@ -21,5 +21,5 @@ behavior -- patch or funding welcome.
 ## Technical Approach
 In broad strokes this extension:
 * Listens for creation of DiscountTrack entities on hook_civicrm_post. (This indicates a pass was used.)
-* Looks up the contribution record linked through this entity to determine how many participants were registered.
+* Looks in the line items table linked through this entity to determine how many participants were registered.
 * Calculates a new value for the `count_use` field for the related DiscountCode and updates it.
