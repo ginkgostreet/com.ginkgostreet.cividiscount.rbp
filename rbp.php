@@ -10,6 +10,13 @@ use CRM_Rbp_ExtensionUtil as E;
  */
 function rbp_civicrm_config(&$config) {
   _rbp_civix_civicrm_config($config);
+
+  static $listening;
+
+  if (!$listening) {
+    \Civi::dispatcher()->addListener('hook_civicrm_pre', array('CRM_Rbp_Util', 'deleteParticipant'), 250);
+    $listening = TRUE;
+  }
 }
 
 /**
@@ -141,24 +148,6 @@ function rbp_civicrm_check(&$messages) {
 }
 
 /**
- * Implements hook_civicrm_pre().
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_pre/
- *
- * @param string $op
- * @param string $objectName
- * @param int $id
- * @param array $params
- * @return void
- */
-function rbp_civicrm_pre($op, $objectName, $id, &$params) {
-  $function = '_' . __FUNCTION__ . '_' . $objectName;
-  if (is_callable($function)) {
-    $function($op, $id, $params);
-  }
-}
-
-/**
  * Implements hook_civicrm_post().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_post/
@@ -167,81 +156,6 @@ function rbp_civicrm_post($op, $objectName, $objectId, &$objectRef) {
   $function = '_' . __FUNCTION__ . '_' . $objectName;
   if (is_callable($function)) {
     $function($op, $objectId, $objectRef);
-  }
-}
-
-/**
- * (Delegated) implementation of hook_civicrm_pre().
- *
- * @param string $op
- * @param int $id
- * @param array $params
- * @return void
- */
-function _rbp_civicrm_pre_Participant($op, $id, &$params) {
-  if ($op === 'delete') {
-    try {
-      $track = civicrm_api3('DiscountTrack', 'getsingle', array(
-        'entity_table' => 'civicrm_participant',
-        'entity_id' => $id,
-      ));
-    }
-    catch (CiviCRM_API3_Exception $e) {
-      // if we're here, either this participant wasn't discounted,
-      // or CiviDiscount got to it first
-      $api = civicrm_api3('Participant', 'getvalue', array(
-        'id' => $id,
-        'return' => 'participant_fee_level',
-      ));
-      $fee_level = array_reduce($api, function($carry, $item) {
-        return $carry . $item;
-      }, '');
-
-      $matches = array();
-      if (!preg_match('/applied discount code (.*?):/', $fee_level, $matches)) {
-        return;
-      }
-      // the discount code is in $matches[1]
-      try {
-        $item_id = civicrm_api3('DiscountCode', 'getvalue', array(
-          'code' => $matches[1],
-          'return' => 'id',
-        ));
-        $track = array(
-          'item_id' => $item_id,
-          'entity_table' => 'civicrm_participant',
-          'entity_id' => $id,
-        );
-      }
-      catch (CiviCRM_API3_Exception $e) {
-        // the discount code went away
-        return;
-      }
-    }
-    $discountTrack = new CRM_CiviDiscount_DAO_Track();
-    foreach ($track as $prop => $val) {
-      $discountTrack->$prop = $val;
-    }
-
-    if (!CRM_Rbp_Util::isRbpEnabled($discountTrack->item_id)) {
-      return;
-    }
-
-    $participantCount = CRM_Rbp_Util::getParticipantCount($discountTrack);
-
-    // CiviDiscount will decrement by one, so adjust for it
-    $usage = $participantCount - 1;
-
-    if ($usage) {
-      // Why do we fetch first, and why via DAO rather than API? First of all, we
-      // need the current usage for our calculation. As for the mechanism,
-      // api.DiscountCode.create is wacky; on update it nulls several fields if
-      // they aren't supplied as params. Moreover, it doesn't accept count_use as
-      // a param.
-      $dao = CRM_CiviDiscount_DAO_Item::findById($discountTrack->item_id);
-      $dao->count_use -= $usage;
-      $dao->save();
-    }
   }
 }
 
