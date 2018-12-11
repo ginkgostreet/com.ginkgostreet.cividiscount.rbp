@@ -2,6 +2,14 @@
 
 class CRM_Rbp_Util {
 
+  /**
+   * Event listener for hook_civicrm_pre()
+   *
+   * @param Symfony\Component\EventDispatcher\Event $event
+   * @param string $eventName
+   * @param Symfony\Component\EventDispatcher\EventDispatcher $dispatcher
+   * @return void
+   */
   public static function deleteParticipant($event, $eventName, $dispatcher) {
 
     if ($event->action == 'delete' && $event->entity == 'Participant') {
