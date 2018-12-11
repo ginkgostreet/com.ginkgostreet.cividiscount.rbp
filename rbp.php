@@ -10,6 +10,14 @@ use CRM_Rbp_ExtensionUtil as E;
  */
 function rbp_civicrm_config(&$config) {
   _rbp_civix_civicrm_config($config);
+
+  static $listening;
+
+  // we have to add a listener on the pre hook so we can prioritize ourselves over CiviDiscount
+  if (!$listening) {
+    \Civi::dispatcher()->addListener('hook_civicrm_pre', array('CRM_Rbp_Util', 'deleteParticipant'), 250);
+    $listening = TRUE;
+  }
 }
 
 /**

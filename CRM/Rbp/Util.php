@@ -3,6 +3,55 @@
 class CRM_Rbp_Util {
 
   /**
+   * Event listener for hook_civicrm_pre()
+   *
+   * @param Symfony\Component\EventDispatcher\Event $event
+   * @param string $eventName
+   * @param Symfony\Component\EventDispatcher\EventDispatcher $dispatcher
+   * @return void
+   */
+  public static function deleteParticipant($event, $eventName, $dispatcher) {
+
+    if ($event->action == 'delete' && $event->entity == 'Participant') {
+      try {
+        $track = civicrm_api3('DiscountTrack', 'getsingle', array(
+          'entity_table' => 'civicrm_participant',
+          'entity_id' => $event->id,
+        ));
+
+        if (!CRM_Rbp_Util::isRbpEnabled($track['item_id'])) {
+          return;
+        }
+
+        // we have to do this because ::getParticipantCount has the arg typed
+        $discountTrack = new CRM_CiviDiscount_DAO_Track();
+        foreach ($track as $prop => $val) {
+          $discountTrack->$prop = $val;
+        }
+
+        $participantCount = CRM_Rbp_Util::getParticipantCount($discountTrack);
+
+        // CiviDiscount will decrement by one, so adjust for it
+        $usage = $participantCount - 1;
+
+        if ($usage) {
+          // Why do we fetch first, and why via DAO rather than API? First of all, we
+          // need the current usage for our calculation. As for the mechanism,
+          // api.DiscountCode.create is wacky; on update it nulls several fields if
+          // they aren't supplied as params. Moreover, it doesn't accept count_use as
+          // a param.
+          $dao = CRM_CiviDiscount_DAO_Item::findById($discountTrack->item_id);
+          $dao->count_use -= $usage;
+          $dao->save();
+        }
+      }
+      catch (CiviCRM_API3_Exception $e) {
+        // if we land here then this participant wasn't discounted
+      }
+    }
+  }
+
+  /**
    * Gets the participant count associated with a given usage of a discount code.
    *
    * @param CRM_CiviDiscount_DAO_Track $discountTrack
