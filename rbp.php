@@ -215,6 +215,49 @@ function _rbp_civicrm_buildForm_CRM_CiviDiscount_Form_Admin(CRM_CiviDiscount_For
 }
 
 /**
+ * Implements hook_civicrm_validateForm().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_validateForm
+ */
+function rbp_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  $function = '_' . __FUNCTION__ . '_' . $formName;
+  if (is_callable($function)) {
+    $function($fields, $files, $form, $errors);
+  }
+}
+
+/**
+ * (Delegated) implementation of hook_civicrm_postProcess().
+ */
+function _rbp_civicrm_validateForm_CRM_Event_Form_Registration_Register(&$fields, &$files, &$form, &$errors) {
+
+  // similar to cividiscount_civicrm_validateForm except we add the line items participant count  
+
+  // _discountInfo is assigned in cividiscount_civicrm_buildAmount() or
+  // cividiscount_civicrm_membershipTypeValues() when a discount is used.
+  $discountInfo = $form->get('_discountInfo');
+  if (isset($discountInfo['discount']['id'])) {
+    $discount = $discountInfo['discount'];
+
+    if (CRM_Rbp_Util::isRbpEnabled($discount['id'])) {
+
+      if ($discount['count_max'] > 0) {
+        $apcount = CRM_Rbp_Util::getSelectedParticipantCount($form);
+
+        // FIXME: we should check the price option for additional_participants too
+        if (array_key_exists('additional_participants', $sv)) {
+          $apcount += $sv['additional_participants'];
+        }
+        if (($discount['count_use'] + $apcount) > $discount['count_max']) {
+          $errors['discountcode'] = ts('There are not enough uses remaining for this code.');
+        }
+      }
+    }
+  }
+
+}
+
+/**
  * Implements hook_civicrm_postProcess().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_postProcess/

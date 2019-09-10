@@ -66,6 +66,62 @@ class CRM_Rbp_Util {
     return (int) array_sum(array_column($lineItems['values'], 'participant_count'));
   }
 
+
+  /**
+   * Gets the participant count selected in a form in order to validate
+   *
+   * @param CRM_Core_Form $form
+   * @return int
+   */
+  public static function getSelectedParticipantCount($form) {
+
+    // inspiration from CRM_Event_Form_Registration::validatePriceSet
+
+    $priceSetId = $form->get('priceSetId');
+    $priceSetDetails = $form->get('priceSet');
+    if (
+      !$priceSetId ||
+      !is_array($priceSetDetails) ||
+      empty($priceSetDetails)
+    ) {
+      return -1; //$errors;
+    }
+
+    $feeBlock = $form->_feeBlock;
+
+    if (empty($feeBlock)) {
+      $feeBlock = $priceSetDetails['fields'];
+    }
+
+    $values = $form->getVar('_submitValues');
+
+    $pcount = 0;
+    foreach ($values as $valKey => $value) {
+      // only price related values
+      if (strpos($valKey, 'price_') === FALSE) {
+        continue;
+      }
+      $priceFieldId = substr($valKey, 6);
+
+      foreach ($feeBlock[$priceFieldId]['options'] as $optId => $optVal) {
+        if (CRM_Utils_Array::value('count', $optVal)) {
+          // quantity items -> participant count * qty
+          if (CRM_Utils_Array::value('html_type', $feeBlock[$priceFieldId]) == 'Text') {
+            $pcount += $optVal['count'] * $value;
+          }
+          // only if the option correspond the selected one
+          elseif ($value == $optId) {
+            $pcount += $optVal['count'];
+          }
+        }
+      }
+    }
+
+    return $pcount;
+
+  }
+
+
   /**
    * @param int|string $discountCodeId
    * @return boolean
